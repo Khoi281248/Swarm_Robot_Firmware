@@ -8,6 +8,8 @@ Firmware cho robot bầy đàn (swarm robot) hai vi điều khiển trên cùng 
 | [`esp32/`](esp32/README.md) | **ESP32-C3-WROOM-02** | Truyền thông: Wi-Fi / ESP-NOW giữa các robot, nạp firmware cho STM32 | ESP-IDF v6.1 |
 | [`shared/`](shared/swarm_protocol.h) | – | Giao thức UART giữa hai chip, **cả hai firmware cùng include** | – |
 
+> 🔌 Thiết kế mạch (KiCad 10: sơ đồ nguyên lý, PCB, BOM, datasheet): [Swarm_Robot_Hardware](https://github.com/Khoi281248/Swarm_Robot_Hardware)
+
 ```
    Robot khác / máy chủ
           │  Wi-Fi, ESP-NOW
