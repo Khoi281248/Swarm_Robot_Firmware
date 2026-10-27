@@ -1,0 +1,33 @@
+# ---------------------------------------------------------------
+# ESP-IDF
+# ---------------------------------------------------------------
+# Thu muc build (idf.py build tu sinh lai)
+build/
+
+# Cau hinh day du do menuconfig sinh ra tu sdkconfig.defaults.
+# Chi commit sdkconfig.defaults (cac gia tri rieng cua project).
+sdkconfig
+sdkconfig.old
+
+# Thu vien tai tu dong tu ESP Component Registry
+managed_components/
+
+# ---------------------------------------------------------------
+# Editor / IDE
+# ---------------------------------------------------------------
+# Chua duong dan ESP-IDF rieng cua tung may (idf.currentSetup)
+.vscode/settings.json
+
+# Bo nho dem cua language server
+.cache/
+.clangd/
+
+# ---------------------------------------------------------------
+# File tam
+# ---------------------------------------------------------------
+*.swp
+*~
+*.bak
+*.log
+__pycache__/
+.DS_Store

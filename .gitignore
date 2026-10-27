@@ -1,8 +1,8 @@
-# Thu muc build (VS Code + CubeIDE) - tu sinh lai duoc
-build/
-Debug/
-Release/
+# Quy tac rieng cua tung firmware nam trong stm32/.gitignore va esp32/.gitignore.
+# File nay chi chua cac muc chung cho ca repo.
 
-# File tam cua CubeMX
-mx.scratch
-*.bak
+# File tam cua editor va he dieu hanh
+*.swp
+*~
+.DS_Store
+Thumbs.db

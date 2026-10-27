@@ -1,0 +1,16 @@
+# Cau hinh rieng cua project ESP32_Swarm_Robot.
+# ESP-IDF doc file nay khi tao sdkconfig moi; cac muc khong ghi o day giu mac dinh.
+# Sua cau hinh: idf.py menuconfig, roi chep muc da doi vao file nay (xem docs/CAU_HINH.md).
+
+# Chip ESP32-C3 (module ESP32-C3-WROOM-02)
+CONFIG_IDF_TARGET="esp32c3"
+
+# Log/console qua USB Serial/JTAG (IO18, IO19 -> cong USB-C).
+# UART0 (IO20, IO21) khong noi ra ngoai tren mach.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# Module WROOM-02 co flash 4 MB (mac dinh cua ESP-IDF la 2 MB)
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+# CPU chay toc do toi da cua ESP32-C3
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_160=y
