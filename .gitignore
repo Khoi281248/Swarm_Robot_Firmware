@@ -1,0 +1,8 @@
+# Thu muc build (VS Code + CubeIDE) - tu sinh lai duoc
+build/
+Debug/
+Release/
+
+# File tam cua CubeMX
+mx.scratch
+*.bak
