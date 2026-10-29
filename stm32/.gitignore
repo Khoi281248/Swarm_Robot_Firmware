@@ -6,3 +6,6 @@ Release/
 # File tam cua CubeMX
 mx.scratch
 *.bak
+
+# CubeIDE tu sinh lai, chua env-hash rieng cua tung may
+.settings/language.settings.xml
