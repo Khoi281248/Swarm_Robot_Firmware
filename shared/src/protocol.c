@@ -12,10 +12,6 @@
 #define	MAX_PROTOCOL_LEN	32
 
 #define PROTOCOL_START_CODE	0xBF
-/* Set of command code */
-#define GO_TO_POINT_EXACT	0x01	// exact pose interpolation
-#define GO_TO_POINT_FAST	0x02	// optimize for fastest trajectory
-#define STABILIZE_AT_POINT	0x03	// stabilization at point
 
 /* We are using fixed len package here to simplify the receive process,
 * integrety check, and send process, all unused byte will not be forced clear or set.

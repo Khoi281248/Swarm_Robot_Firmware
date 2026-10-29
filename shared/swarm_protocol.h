@@ -18,4 +18,9 @@
 
 #define SWARM_UART_BAUD     115200U
 
+/* Set of command code */
+#define GO_TO_POINT_EXACT	0x01	// exact pose interpolation
+#define GO_TO_POINT_FAST	0x02	// optimize for fastest trajectory
+#define STABILIZE_AT_POINT	0x03	// stabilization at point
+
 #endif /* SWARM_PROTOCOL_H */
