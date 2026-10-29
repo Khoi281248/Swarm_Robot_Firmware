@@ -45,7 +45,7 @@ gh repo clone Khoi281248/Swarm_Robot_Firmware
 
 | Muốn làm | Mở thư mục | Đọc |
 |---|---|---|
-| Firmware STM32 | `stm32/` bằng STM32CubeIDE 2.2 (*Import → STM32 CMake Project*) hoặc VS Code | [stm32/README.md](stm32/README.md) |
+| Firmware STM32 | `stm32/` bằng STM32CubeIDE 2.2 (*Import → Existing Projects into Workspace*) hoặc VS Code | [stm32/README.md](stm32/README.md) |
 | Firmware ESP32 | `esp32/` bằng VS Code + extension ESP-IDF | [esp32/README.md](esp32/README.md) |
 
 > Mở **thư mục con** (`stm32/` hoặc `esp32/`) trong IDE, không mở thư mục gốc. Mỗi firmware có hệ build riêng.
