@@ -40,7 +40,7 @@ static protocol_recv_state_t recv_state;
 static uint32_t recv_body_count = 0;
 
 /* Static function definition goes here */
-static uint16_t compute_crc(const uint8_t *data, uint16_t len);
+static uint16_t compute_crc(const protocol_package_t *package);
 
 /* 
  * This function is designed to work over UART_REV interrupt method. 
@@ -72,9 +72,7 @@ protocol_recv_state_t recieve_package(uint8_t recv_char)
 			}
 			break;
 		case CHECK_CRC:
-			uint16_t recv_crc = compute_crc(
-					((uint8_t *)&recv_package)+1, 
-					(uint16_t)(8+MAX_PROTOCOL_LEN));
+			uint16_t recv_crc = compute_crc(&recv_package);
 			if (recv_package.crc == recv_crc)
 				// Push to data ring, queue with RTOS
 				;
@@ -89,18 +87,25 @@ protocol_recv_state_t recieve_package(uint8_t recv_char)
  * Only verify package integrity for cmd and body, head code is not needed, 
  * it is part of package identifier itself.
  * Source: https://github.com/loiturong/OTA-update-for-IOT-device/blob/main/stm32/app/Core/Src/protocol.c
+ * modifies:
+ * - change input to the package structure
+ * - change package receive handler
  * */
-static uint16_t compute_crc(const uint8_t *data, uint16_t len)
+static uint16_t compute_crc(const protocol_package_t *package)
 {
-    uint16_t crc = 0xFFFF;
-    while (len--) {
-        crc ^= (uint16_t)(*data++ << 8);
-        for (uint8_t i = 0; i < 8; i++) {
-            if (crc & 0x8000)
-                crc = (crc << 1) ^ 0x1021;
-            else
-                crc <<= 1;
-        }
-    }
-    return crc;
+	/* Adding package structure specific handler */
+	uint8_t *data_p = ((uint8_t*)package)+1;		// drop head
+	uint16_t len = MAX_PROTOCOL_LEN + 8;			// body+cmd
+
+	uint16_t crc = 0xFFFF;
+	while (len--) {
+		crc ^= (uint16_t)(*data_p++ << 8);
+		for (uint8_t i = 0; i < 8; i++) {
+			if (crc & 0x8000)
+				crc = (crc << 1) ^ 0x1021;
+		else
+			crc <<= 1;
+		}
+	}
+	return crc;
 }
