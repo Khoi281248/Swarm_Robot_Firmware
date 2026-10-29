@@ -35,8 +35,8 @@ typedef enum {
 	CHECK_CMD = 1,
 	RECV_BODY = 2,
 	CHECK_CRC = 3,
-} protocol_state_machine;
-static protocol_state_machine recv_state;
+} protocol_recv_state_t;
+static protocol_recv_state_t recv_state;
 static uint32_t recv_body_count = 0;
 
 /* Static function definition goes here */
@@ -47,9 +47,9 @@ static uint16_t compute_crc(const uint8_t *data, uint16_t len);
  * As the state machine will be initialized as static variable, state machine will return
  * its state for caller wish to check ther operation status.
  * */
-protocol_state_machine recieve_package(uint8_t recv_char)
+protocol_recv_state_t recieve_package(uint8_t recv_char)
 {
-	protocol_state_machine return_code =  recv_state;
+	protocol_recv_state_t return_code =  recv_state;
 	switch (recv_state) {
 		case WAIT_HEAD:
 			if (recv_char == PROTOCOL_START_CODE)
