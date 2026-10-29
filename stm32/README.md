@@ -61,7 +61,7 @@ TIM1 được dùng làm **timebase của HAL** (SysTick để dành cho FreeRTO
 ## Cấu trúc thư mục
 
 ```
-STM32_Swarm_Robot/
+stm32/
 ├── STM32_Swarm_Robot.ioc     Cấu hình CubeMX (chân, clock, ngoại vi, FreeRTOS)
 ├── CMakeLists.txt            File CMake chính (thêm file .c tự viết ở đây)
 ├── CMakePresets.json         Preset Debug / Release
@@ -78,9 +78,10 @@ STM32_Swarm_Robot/
 ## Build
 
 ### Cách 1: STM32CubeIDE 2.2
-1. **File → Import → STM32 → STM32 CMake Project**, chọn thư mục này.
-2. MCU chọn **STM32F103C8Tx**.
-3. Chọn project, bấm **Build** (Ctrl+B).
+1. **File → Import → General → Existing Projects into Workspace**, chọn thư mục `stm32/`.
+2. Tick **STM32_Swarm_Robot**, **bỏ tick** *Copy projects into workspace*, bấm **Finish**.
+3. Chọn project, bấm **Build** (Ctrl+B). Nếu hiện hộp thoại *Existing build directory found*,
+   chọn **Delete and Reconfigure**.
 
 ### Cách 2: VS Code
 1. Mở thư mục này bằng VS Code. Cài bundle `gnu-tools-for-stm32` khi extension hỏi.
