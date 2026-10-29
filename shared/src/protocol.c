@@ -28,7 +28,7 @@ typedef struct {
 	uint16_t crc;
 } protocol_package_t;
 static protocol_package_t recv_package;
-static protocol_package_t send_package;
+static protocol_package_t send_package = {PROTOCOL_START_CODE};	// reduce operations
 
 typedef enum {
 	WAIT_HEAD = 0,
@@ -38,6 +38,11 @@ typedef enum {
 } protocol_recv_state_t;
 static protocol_recv_state_t recv_state;
 static uint32_t recv_body_count = 0;
+
+typedef enum {
+	BUILDING = 0,
+} protocol_send_state_t;
+static protocol_send_state_t send_state;
 
 /* Static function definition goes here */
 static uint16_t compute_crc(const protocol_package_t *package);
@@ -80,6 +85,21 @@ protocol_recv_state_t recieve_package(uint8_t recv_char)
 			break;
 	}
 	return return_code;
+}
+
+/* 
+ * Set of functions to send each type of command code, this functions is specificially designed
+ * for ESP32
+ */
+protocol_send_state_t esp32_command(uint8_t cmd_code, float x, float y, float theta, float v)
+{
+	send_package.cmd = cmd_code;
+	send_package.body[0] = x;
+	send_package.body[1] = y;
+	send_package.body[2] = theta;
+	send_package.body[3] = v;
+	send_package.crc = compute_crc(&send_package);
+	// Send package with UART, this operation does not require interrupt and is supported with HAL
 }
 
 /*
