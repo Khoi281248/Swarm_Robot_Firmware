@@ -22,5 +22,38 @@
 #define GO_TO_POINT_EXACT	0x01	// exact pose interpolation
 #define GO_TO_POINT_FAST	0x02	// optimize for fastest trajectory
 #define STABILIZE_AT_POINT	0x03	// stabilization at point
+#define UPDATE_CURRENT_POSE	0x04	// send current computed posture
+
+/* Global byte pointer, received byte from UART will be pushed to this pointer */
+extern char *p_recv_byte;
+
+/* define protocol structs, enums */
+typedef enum {
+	BLOCKING  = -1,	// Blocking on package integrity
+	WAIT_HEAD = 0,
+	CHECK_CMD = 1,
+	RECV_BODY = 2,
+	CHECK_CRC = 3,
+} protocol_recv_state_t;
+
+typedef enum {
+	SEND_DROP = 0,
+	SEND_DONE = 1,
+	BUILDING = 2,
+	WAIT_ACK = 3,
+} protocol_send_state_t;
+
+typedef enum {
+	FAILED 	= 0,
+	SUCCESS = 1,
+} trans_recv_status_t;
+
+/* API provided to application */
+protocol_recv_state_t recieve_package(uint8_t *recv_char);
+protocol_send_state_t send_command(uint8_t cmd_code, 
+		float x, float y, float theta, float v);
+
+/* Wrapper for UART transfer that require application to defines its own logic */
+trans_recv_status_t transmit_data(char *byte, uint32_t len);
 
 #endif /* SWARM_PROTOCOL_H */

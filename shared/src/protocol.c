@@ -7,11 +7,15 @@
  */
 
 #include "swarm_protocol.h"
-#include "stdint.h"
 
+#define MAX_RETRIES		3
 #define	MAX_PROTOCOL_LEN	32
 
-#define PROTOCOL_START_CODE	0xBF
+#define PROTOCOL_START_CODE	0xAB
+
+/* ACK-NACK code */
+#define PROTOCOL_ACK_CODE	0xBC
+#define PROTOCOL_NACK_CODE	0xCD
 
 /* We are using fixed len package here to simplify the receive process,
 * integrety check, and send process, all unused byte will not be forced clear or set.
@@ -23,24 +27,17 @@ typedef struct {
 	uint32_t body[MAX_PROTOCOL_LEN];
 	uint16_t crc;
 } protocol_package_t;
+
+
+/* Static variables declaration goes here */
 static protocol_package_t recv_package;
 static protocol_package_t send_package = {PROTOCOL_START_CODE};	// reduce operations
-
-typedef enum {
-	WAIT_HEAD = 0,
-	CHECK_CMD = 1,
-	RECV_BODY = 2,
-	CHECK_CRC = 3,
-} protocol_recv_state_t;
 static protocol_recv_state_t recv_state;
 static uint32_t recv_body_count = 0;
-
-typedef enum {
-	BUILDING = 0,
-} protocol_send_state_t;
 static protocol_send_state_t send_state;
+static char *p_recv_byte;
 
-/* Static function definition goes here */
+/* Static function declaration goes here */
 static uint16_t compute_crc(const protocol_package_t *package);
 
 /* 
@@ -48,7 +45,7 @@ static uint16_t compute_crc(const protocol_package_t *package);
  * As the state machine will be initialized as static variable, state machine will return
  * its state for caller wish to check ther operation status.
  * */
-protocol_recv_state_t recieve_package(uint8_t recv_char)
+protocol_recv_state_t recieve_package(uint8_t *recv_char)
 {
 	protocol_recv_state_t return_code =  recv_state;
 	switch (recv_state) {
@@ -74,28 +71,35 @@ protocol_recv_state_t recieve_package(uint8_t recv_char)
 			break;
 		case CHECK_CRC:
 			uint16_t recv_crc = compute_crc(&recv_package);
-			if (recv_package.crc == recv_crc)
+			if (recv_package.crc == recv_crc) {
 				// Push to data ring, queue with RTOS
-				;
-			recv_state = WAIT_HEAD;
+				// Sending ACK code
+				recv_state = WAIT_HEAD;
+			}
+			break;
+		case BLOCKING:
+		case default:
 			break;
 	}
 	return return_code;
 }
 
-/* 
- * Set of functions to send each type of command code, this functions is specificially designed
- * for ESP32
- */
-protocol_send_state_t esp32_command(uint8_t cmd_code, float x, float y, float theta, float v)
+protocol_send_state_t send_command(uint8_t cmd_code, float x, float y, float theta, float v)
 {
+	protocol_send_state_t status = BUIDLING;
 	send_package.cmd = cmd_code;
 	send_package.body[0] = x;
 	send_package.body[1] = y;
 	send_package.body[2] = theta;
 	send_package.body[3] = v;
 	send_package.crc = compute_crc(&send_package);
-	// Send package with UART, this operation does not require interrupt and is supported with HAL
+
+
+	for (int i = 0; i < MAX_RETRIES; i++) {
+		; // Send package with UART, this operation does not require interrupt and is supported with HAL
+	}
+	//
+	return status;
 }
 
 /*
