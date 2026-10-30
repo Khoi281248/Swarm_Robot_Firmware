@@ -29,7 +29,7 @@ extern char *p_recv_byte;
 
 /* define protocol structs, enums */
 typedef enum {
-	REVC_ACK  = -1,
+	RECV_ACK  = -1,
 	WAIT_HEAD = 0,
 	CHECK_CMD = 1,
 	RECV_BODY = 2,
@@ -39,8 +39,9 @@ typedef enum {
 typedef enum {
 	SEND_DROP = 0,
 	SEND_DONE = 1,
-	BUILDING = 2,
-	WAIT_ACK = 3,
+	SENDING = 2,
+	ACK = 3,
+	NACK = 4,
 } protocol_send_state_t;
 
 typedef enum {
@@ -54,8 +55,18 @@ protocol_send_state_t protocol_send(uint8_t cmd_code,
 		float x, float y, float theta, float v);
 
 /* Wrapper for UART transfer that require application to defines its own logic */
-trans_recv_status_t transmit_data(char *byte, uint32_t len);
+trans_recv_status_t transmit_data(uintptr_t *byte, uint32_t len);
 /* This is a wrapper for UART receive Interrupt mode */
-trans_recv_status_t receive_data_it(char *byte);
+trans_recv_status_t receive_data_it(uintptr_t *byte);
 
+/* This two function require application to provide 
+ * an appropriate wait machenics, this can be done using
+ * OS delay, or HAL delay on bare metal
+ * Or using a process halt mechanism to trigger process
+ * delay, and wake handle by the OS.
+ */
+void wait_ack(void);
+void wait_ack_done(void);
+
+void push_data(uintptr_t *buffer_head);
 #endif /* SWARM_PROTOCOL_H */

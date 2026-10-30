@@ -9,7 +9,7 @@
 #include "swarm_protocol.h"
 
 #define MAX_RETRIES		3
-#define	MAX_PROTOCOL_LEN	32
+#define	MAX_PROTOCOL_LEN	8
 
 #define PROTOCOL_START_CODE	0xAB
 
@@ -32,6 +32,7 @@ typedef struct {
 static protocol_package_t s_recv_package;
 static protocol_package_t s_send_package = {PROTOCOL_START_CODE};	// reduce operations
 static protocol_recv_state_t s_recv_state;
+static protocol_send_state_t s_send_state;
 static uint32_t s_recv_body_count = 0;
 static char *g_p_recv_byte;
 
@@ -45,40 +46,48 @@ static uint16_t compute_crc(const protocol_package_t *p_package);
  * */
 protocol_recv_state_t protocol_recieve(void)
 {
-	protocol_recv_state_t return_code =  recv_state;
+	protocol_recv_state_t return_code =  s_recv_state;
 	switch (s_recv_state) {
 		case WAIT_HEAD:
-			if (g_p_recv_byte == PROTOCOL_START_CODE)
+			if (*g_p_recv_byte == PROTOCOL_START_CODE)
 				s_recv_state = CHECK_CMD;
 			break;
 		case CHECK_CMD:
-			if (g_p_recv_byte & ~0x03 != 0) {
+			if ((*g_p_recv_byte & ~0x03) != 0) {
 				s_recv_state = WAIT_HEAD;
 			} else {
-				s_recv_package.head = g_p_recv_byte;
+				s_recv_package.head = (uint8_t)*g_p_recv_byte;
 				s_recv_body_count &= 0x00;	// same as assign 0 anyway when compiled
 				s_recv_state = RECV_BODY;
 			}
 			break;
 		case RECV_BODY:
 			if (s_recv_body_count++ < MAX_PROTOCOL_LEN) {
-				s_recv_package.body[s_recv_body_count] = p_recv_by;
+				s_recv_package.body[s_recv_body_count] = *g_p_recv_byte;
 			} else {
 				s_recv_state = CHECK_CRC;
 			}
 			break;
 		case CHECK_CRC:
 			uint16_t recv_crc = compute_crc(&s_recv_package);
-			if (s_recv_package.crc == g_p_recv_byte) {
-				// Push to data ring, queue with RTOS
-				transmit_data(&PROTOCOL_ACK_CODE);
+			if (recv_crc == *g_p_recv_byte) {
+				push_data((uintptr_t *)&s_recv_package);
+				uint8_t ack_code = PROTOCOL_ACK_CODE;
+				transmit_data((uintptr_t *)&ack_code, 1);
 			} else {
-				transmit_data(&PROTOCOL_NACK_CODE);
+				uint8_t ack_code = PROTOCOL_NACK_CODE;
+				transmit_data((uintptr_t *)&ack_code, 1);
 			}
 			s_recv_state = WAIT_HEAD;
 			break;
 		case RECV_ACK:
-		case default:
+			uint8_t ack_code = *g_p_recv_byte;
+			if (ack_code == PROTOCOL_ACK_CODE) {
+				s_send_state = ACK;
+			} else if (ack_code == PROTOCOL_NACK_CODE){
+				s_send_state = NACK;
+			}
+			wait_ack_done();
 			break;
 	}
 	return return_code;
@@ -86,7 +95,7 @@ protocol_recv_state_t protocol_recieve(void)
 
 protocol_send_state_t protocol_send(uint8_t cmd_code, float x, float y, float theta, float v)
 {
-	protocol_send_state_t status = BUIDLING;
+	s_send_state = SENDING;
 	s_send_package.cmd = cmd_code;
 	s_send_package.body[0] = x;
 	s_send_package.body[1] = y;
@@ -94,11 +103,21 @@ protocol_send_state_t protocol_send(uint8_t cmd_code, float x, float y, float th
 	s_send_package.body[3] = v;
 	s_send_package.crc = compute_crc(&s_send_package);
 
-	//for (int i = 0; i < MAX_RETRIES; i++) {
-	//	; // Send package with UART, this operation does not require interrupt and is supported with HAL
-	//}
-	//
-	return status;
+	/* save recv_state */
+	protocol_recv_state_t temp_state = s_recv_state;
+	for (int i = 0; i < MAX_RETRIES; i++) {
+		if (transmit_data((uintptr_t *)&s_send_package, sizeof(protocol_package_t)) != SUCCESS)
+			continue;
+		s_recv_state = RECV_ACK;
+		wait_ack();
+		if (s_send_state == ACK) {
+			s_recv_state = temp_state;
+			s_send_state = SEND_DONE;
+			return s_send_state;
+		}
+	}
+	s_send_state = SEND_DROP;
+	return s_send_state;
 }
 
 /*
