@@ -28,56 +28,56 @@ typedef struct {
 	uint16_t crc;
 } protocol_package_t;
 
-
 /* Static variables declaration goes here */
-static protocol_package_t recv_package;
-static protocol_package_t send_package = {PROTOCOL_START_CODE};	// reduce operations
-static protocol_recv_state_t recv_state;
-static uint32_t recv_body_count = 0;
-static protocol_send_state_t send_state;
-static char *p_recv_byte;
+static protocol_package_t s_recv_package;
+static protocol_package_t s_send_package = {PROTOCOL_START_CODE};	// reduce operations
+static protocol_recv_state_t s_recv_state;
+static uint32_t s_recv_body_count = 0;
+static char *g_p_recv_byte;
 
 /* Static function declaration goes here */
-static uint16_t compute_crc(const protocol_package_t *package);
+static uint16_t compute_crc(const protocol_package_t *p_package);
 
 /* 
  * This function is designed to work over UART_REV interrupt method. 
  * As the state machine will be initialized as static variable, state machine will return
  * its state for caller wish to check ther operation status.
  * */
-protocol_recv_state_t protocol_recieve(uint8_t *recv_char)
+protocol_recv_state_t protocol_recieve(void)
 {
 	protocol_recv_state_t return_code =  recv_state;
-	switch (recv_state) {
+	switch (s_recv_state) {
 		case WAIT_HEAD:
-			if (recv_char == PROTOCOL_START_CODE)
-				recv_state = CHECK_CMD;
+			if (g_p_recv_byte == PROTOCOL_START_CODE)
+				s_recv_state = CHECK_CMD;
 			break;
 		case CHECK_CMD:
-			if (recv_char & ~0x03 != 0) {
-				recv_state = WAIT_HEAD;
+			if (g_p_recv_byte & ~0x03 != 0) {
+				s_recv_state = WAIT_HEAD;
 			} else {
-				recv_package.head = recv_char;
-				recv_body_count &= 0x00;	// same as assign 0 anyway when compiled
-				recv_state = RECV_BODY;
+				s_recv_package.head = g_p_recv_byte;
+				s_recv_body_count &= 0x00;	// same as assign 0 anyway when compiled
+				s_recv_state = RECV_BODY;
 			}
 			break;
 		case RECV_BODY:
-			if (recv_body_count++ < MAX_PROTOCOL_LEN) {
-				recv_package.body[recv_body_count] = recv_char;
+			if (s_recv_body_count++ < MAX_PROTOCOL_LEN) {
+				s_recv_package.body[s_recv_body_count] = p_recv_by;
 			} else {
-				recv_state = CHECK_CRC;
+				s_recv_state = CHECK_CRC;
 			}
 			break;
 		case CHECK_CRC:
-			uint16_t recv_crc = compute_crc(&recv_package);
-			if (recv_package.crc == recv_crc) {
+			uint16_t recv_crc = compute_crc(&s_recv_package);
+			if (s_recv_package.crc == g_p_recv_byte) {
 				// Push to data ring, queue with RTOS
-				// Sending ACK code
-				recv_state = WAIT_HEAD;
+				transmit_data(&PROTOCOL_ACK_CODE);
+			} else {
+				transmit_data(&PROTOCOL_NACK_CODE);
 			}
+			s_recv_state = WAIT_HEAD;
 			break;
-		case BLOCKING:
+		case RECV_ACK:
 		case default:
 			break;
 	}
@@ -87,17 +87,16 @@ protocol_recv_state_t protocol_recieve(uint8_t *recv_char)
 protocol_send_state_t protocol_send(uint8_t cmd_code, float x, float y, float theta, float v)
 {
 	protocol_send_state_t status = BUIDLING;
-	send_package.cmd = cmd_code;
-	send_package.body[0] = x;
-	send_package.body[1] = y;
-	send_package.body[2] = theta;
-	send_package.body[3] = v;
-	send_package.crc = compute_crc(&send_package);
+	s_send_package.cmd = cmd_code;
+	s_send_package.body[0] = x;
+	s_send_package.body[1] = y;
+	s_send_package.body[2] = theta;
+	s_send_package.body[3] = v;
+	s_send_package.crc = compute_crc(&s_send_package);
 
-
-	for (int i = 0; i < MAX_RETRIES; i++) {
-		; // Send package with UART, this operation does not require interrupt and is supported with HAL
-	}
+	//for (int i = 0; i < MAX_RETRIES; i++) {
+	//	; // Send package with UART, this operation does not require interrupt and is supported with HAL
+	//}
 	//
 	return status;
 }
@@ -111,15 +110,15 @@ protocol_send_state_t protocol_send(uint8_t cmd_code, float x, float y, float th
  * - change input to the package structure
  * - change package receive handler
  * */
-static uint16_t compute_crc(const protocol_package_t *package)
+static uint16_t compute_crc(const protocol_package_t *p_package)
 {
 	/* Adding package structure specific handler */
-	uint8_t *data_p = ((uint8_t*)package)+1;		// drop head
+	uint8_t *p_data = ((uint8_t*)p_package)+1;		// drop head
 	uint16_t len = MAX_PROTOCOL_LEN + 8;			// body+cmd
 
 	uint16_t crc = 0xFFFF;
 	while (len--) {
-		crc ^= (uint16_t)(*data_p++ << 8);
+		crc ^= (uint16_t)(*p_data++ << 8);
 		for (uint8_t i = 0; i < 8; i++) {
 			if (crc & 0x8000)
 				crc = (crc << 1) ^ 0x1021;

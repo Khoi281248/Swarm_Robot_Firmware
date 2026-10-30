@@ -29,7 +29,7 @@ extern char *p_recv_byte;
 
 /* define protocol structs, enums */
 typedef enum {
-	BLOCKING  = -1,	// Blocking on package integrity
+	REVC_ACK  = -1,
 	WAIT_HEAD = 0,
 	CHECK_CMD = 1,
 	RECV_BODY = 2,
@@ -49,11 +49,13 @@ typedef enum {
 } trans_recv_status_t;
 
 /* API provided to application */
-protocol_recv_state_t protocol_recieve(uint8_t *recv_char);
+protocol_recv_state_t protocol_recieve(void);
 protocol_send_state_t protocol_send(uint8_t cmd_code, 
 		float x, float y, float theta, float v);
 
 /* Wrapper for UART transfer that require application to defines its own logic */
 trans_recv_status_t transmit_data(char *byte, uint32_t len);
+/* This is a wrapper for UART receive Interrupt mode */
+trans_recv_status_t receive_data_it(char *byte);
 
 #endif /* SWARM_PROTOCOL_H */
