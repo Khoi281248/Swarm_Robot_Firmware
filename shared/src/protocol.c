@@ -45,7 +45,7 @@ static uint16_t compute_crc(const protocol_package_t *package);
  * As the state machine will be initialized as static variable, state machine will return
  * its state for caller wish to check ther operation status.
  * */
-protocol_recv_state_t recieve_package(uint8_t *recv_char)
+protocol_recv_state_t protocol_recieve(uint8_t *recv_char)
 {
 	protocol_recv_state_t return_code =  recv_state;
 	switch (recv_state) {
@@ -84,7 +84,7 @@ protocol_recv_state_t recieve_package(uint8_t *recv_char)
 	return return_code;
 }
 
-protocol_send_state_t send_command(uint8_t cmd_code, float x, float y, float theta, float v)
+protocol_send_state_t protocol_send(uint8_t cmd_code, float x, float y, float theta, float v)
 {
 	protocol_send_state_t status = BUIDLING;
 	send_package.cmd = cmd_code;

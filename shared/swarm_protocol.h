@@ -49,8 +49,8 @@ typedef enum {
 } trans_recv_status_t;
 
 /* API provided to application */
-protocol_recv_state_t recieve_package(uint8_t *recv_char);
-protocol_send_state_t send_command(uint8_t cmd_code, 
+protocol_recv_state_t protocol_recieve(uint8_t *recv_char);
+protocol_send_state_t protocol_send(uint8_t cmd_code, 
 		float x, float y, float theta, float v);
 
 /* Wrapper for UART transfer that require application to defines its own logic */
