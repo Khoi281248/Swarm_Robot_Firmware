@@ -118,6 +118,82 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
+static protocol_package_t s_recv_package;
+static protocol_package_t s_send_package;
+static protocol_recv_state_t s_recv_state;
+extern float x, y, theta, v;
+
+void init_protocol(UART_HandleTypeDef* huart)
+{
+	// Init receive operation
+	s_recv_state = WAIT_HEAD;
+	HAL_UART_Receive_IT(huart, &s_recv_package.head, 1);
+}
+
+void protocol_send(UART_HandleTypeDef* huart, protocol_status_t status)
+{
+	s_send_package.cmd = s_recv_package.cmd;
+	s_send_package.id = s_recv_package.id;
+	/* These part belongs to a gloable shared variables
+	 * But read operation does not require to lock the variables
+	 * Consider doing so if the data hands out unstable
+	 */
+	if (status == BAD_CRC) {
+		s_send_package.body[0] = 0;
+		s_send_package.body[1] = 0;
+		s_send_package.body[2] = 0;
+		s_send_package.body[3] = 0;
+	} else {
+		s_send_package.body[0] = x;
+		s_send_package.body[1] = y;
+		s_send_package.body[2] = theta;
+		s_send_package.body[3] = v;
+	}
+	s_send_package.crc = compute_crc((uintptr_t *)&s_recv_package, 
+					sizeof(protocol_package_t)-sizeof(uint16_t));
+	HAL_UART_Transmit_IT(huart, (uint8_t *)&s_send_package, sizeof(protocol_package_t));
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart)
+{
+	switch (s_recv_state) {
+		case WAIT_HEAD:
+			if (s_recv_package.head == PROTOCOL_START_CODE) {
+				s_recv_state = CHECK_CMD;
+				HAL_UART_Receive_IT(huart, &s_recv_package.cmd, 1);
+			} else {
+				HAL_UART_Receive_IT(huart, &s_recv_package.head, 1);
+			}
+			break;
+		case CHECK_CMD:
+			if ((s_recv_package.cmd & ~0x03) != 0) {
+				s_recv_state = WAIT_HEAD;
+				HAL_UART_Receive_IT(huart, &s_recv_package.head, 1);
+			} else {
+				s_recv_state = CHECK_CRC;
+				HAL_UART_Receive_IT(huart, &s_recv_package.id, 1);
+				HAL_UART_Receive_IT(huart, &s_recv_package.status, 1);
+				HAL_UART_Receive_IT(huart, (uint8_t *)&s_recv_package.body, 4*PROTOCOL_LEN);
+				HAL_UART_Receive_IT(huart, (uint8_t *)&s_recv_package.crc, 2);
+			}
+			break;
+		case CHECK_CRC:
+			uint16_t recv_crc = compute_crc(
+					(uintptr_t *)&s_recv_package, 
+					sizeof(protocol_package_t)-sizeof(uint16_t));
+			if (recv_crc == s_recv_package.crc) {
+				protocol_send(huart, GOOD_RES);
+			} else {
+				protocol_send(huart, BAD_CRC);
+			}
+			s_recv_state = WAIT_HEAD;
+			break;
+		default:
+			s_recv_state = WAIT_HEAD;
+			HAL_UART_Receive_IT(huart, &s_recv_package.head, 1);
+			break;
+	}
+}
 
 /* USER CODE END 1 */
 
