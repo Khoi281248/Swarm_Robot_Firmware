@@ -48,6 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+float x, y, theta, v;
 
 /* USER CODE END PV */
 

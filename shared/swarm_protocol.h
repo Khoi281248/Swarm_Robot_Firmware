@@ -18,4 +18,55 @@
 
 #define SWARM_UART_BAUD     115200U
 
+/* Set of command code */
+#define GO_TO_POINT_EXACT	0x01	// exact pose interpolation
+#define GO_TO_POINT_FAST	0x02	// optimize for fastest trajectory
+#define STABILIZE_AT_POINT	0x03	// stabilization at point
+#define UPDATE_CURRENT_POSE	0x04	// send current computed posture
+
+/* Global byte pointer, received byte from UART will be pushed to this pointer */
+extern char *p_recv_byte;
+
+/* define protocol structs, enums */
+typedef enum {
+	RECV_ACK  = -1,
+	WAIT_HEAD = 0,
+	CHECK_CMD = 1,
+	RECV_BODY = 2,
+	CHECK_CRC = 3,
+} protocol_recv_state_t;
+
+typedef enum {
+	SEND_DROP = 0,
+	SEND_DONE = 1,
+	SENDING = 2,
+	ACK = 3,
+	NACK = 4,
+} protocol_send_state_t;
+
+typedef enum {
+	FAILED 	= 0,
+	SUCCESS = 1,
+} trans_recv_status_t;
+
+/* API provided to application */
+protocol_recv_state_t protocol_recieve(void);
+protocol_send_state_t protocol_send(uint8_t cmd_code, 
+		float x, float y, float theta, float v);
+
+/* Wrapper for UART transfer that require application to defines its own logic */
+trans_recv_status_t transmit_data(uintptr_t *byte, uint32_t len);
+/* This is a wrapper for UART receive Interrupt mode */
+trans_recv_status_t receive_data_it(uintptr_t *byte);
+
+/* This two function require application to provide 
+ * an appropriate wait machenics, this can be done using
+ * OS delay, or HAL delay on bare metal
+ * Or using a process halt mechanism to trigger process
+ * delay, and wake handle by the OS.
+ */
+void wait_ack(void);
+void wait_ack_done(void);
+
+void push_data(uintptr_t *buffer_head);
 #endif /* SWARM_PROTOCOL_H */

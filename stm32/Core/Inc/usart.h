@@ -29,6 +29,8 @@ extern "C" {
 #include "main.h"
 
 /* USER CODE BEGIN Includes */
+#include "hardware_protocol.h"
+#include "software_crc.h"
 
 /* USER CODE END Includes */
 
@@ -41,6 +43,8 @@ extern UART_HandleTypeDef huart1;
 void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+void init_protocol(UART_HandleTypeDef* huart);
+static void protocol_send(UART_HandleTypeDef* huart, protocol_status_t status);
 
 /* USER CODE END Prototypes */
 
