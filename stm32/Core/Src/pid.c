@@ -31,7 +31,8 @@ pid_out_t pid_loop(float setpoint, float current)
 	/* PID algorithm, adding anti-windup and low-pass filter by default */
 	float up = kp*(ek - ek1);
 	float ui = ki * det * (ek -ek1) / 2;
-	ui = ui;	// TODO: Add anti-windup here
+	ui = (ui < 1) ? ui : 1;
+	ui = (ui > -1) ? ui : -1;
 	float ud = kd * (ek - 2*ek1 + ek2) / det;
 	ud = (1 - alpha)*ek + alpha * ud;
 	uk = uk1 + up + ui + ud;
