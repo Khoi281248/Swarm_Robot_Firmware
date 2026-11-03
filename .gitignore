@@ -6,3 +6,7 @@
 *~
 .DS_Store
 Thumbs.db
+
+# machine wise debug config
+.gdbinit
+openocd.cfg

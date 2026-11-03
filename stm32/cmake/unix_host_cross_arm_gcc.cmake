@@ -4,8 +4,8 @@ set(CMAKE_SYSTEM_PROCESSOR arm-none-eabi)
 set(CMAKE_C_COMPILER	arm-none-eabi-gcc)
 set(CMAKE_ASM_COMPILER	${CMAKE_C_COMPILER})
 set(CMAKE_LINKER	${CMAKE_C_COMPILER})
-set(CMAKE_OBJCOPY	$arm-none-eabi-objcopy)
-set(CMAKE_SIZE		$arm-none-eabi-size)
+set(CMAKE_OBJCOPY	arm-none-eabi-objcopy)
+set(CMAKE_SIZE		arm-none-eabi-size)
 # No gcc test using full environment library
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
@@ -14,7 +14,7 @@ set(TARGET_FLAGS "-mcpu=cortex-m3 ")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${TARGET_FLAGS}")
 set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS} -MMD -MP")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthumb -Wall -fdata-sections -ffunction-sections -fstack-usage")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthumb -mthumb-interwork -Wall -fdata-sections -ffunction-sections -fstack-usage")
 
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g3")
 set(CMAKE_C_FLAGS_RELEASE "-O2 -g")
