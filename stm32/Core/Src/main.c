@@ -27,6 +27,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+
+#include "pid.h"
 
 /* USER CODE END Includes */
 
@@ -48,7 +53,9 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-float x, y, theta, v;
+xSemaphoreHandle posture_mutex;
+volatile float x, y, theta, v, omega;
+const float r_chassis = 0.084 / 2;
 
 /* USER CODE END PV */
 
@@ -100,6 +107,10 @@ int main(void)
   MX_TIM4_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+	posture_mutex = xSemaphoreCreateMutex();
+
+	/* Task creation after shared resources have been initiated */
+	pid_loop_task_start(0);
 
   /* USER CODE END 2 */
 

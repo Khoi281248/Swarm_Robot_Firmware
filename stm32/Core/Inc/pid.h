@@ -10,13 +10,9 @@
 #define PID_H
 
 #include <stdint.h>
+#include "FreeRTOS.h"
 
-
-typedef struct {
-	float 	duty;	// float range from [0,1], need post-processing to get the TIM_PWM value
-	uint8_t dir;	// direction to H-bridge
-} pid_out_t;
-
-pid_out_t pid_loop(float setpoint, float current);
+void pid_loop_task_start(unsigned portBASE_TYPE prior);
+void pid_update_setpoint(void);
 
 #endif /* PID_H */
