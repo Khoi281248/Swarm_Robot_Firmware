@@ -19,11 +19,12 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "usart.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "semphr.h"
 
 /* USER CODE BEGIN 0 */
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "hardware_protocol.h"
+#include "software_crc.h"
 
 /* USER CODE END 0 */
 
@@ -122,47 +123,15 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 
 /* USER CODE BEGIN 1 */
 static protocol_package_t s_recv_package;
-static protocol_package_t s_send_package;
 static protocol_recv_state_t s_recv_state;
-extern volatile float x, y, theta, v;
-extern xSemaphoreHandle posture_mutex;
+static BaseType_t s_protocol_task_wake;
+extern QueueHandle_t g_protocol_queue;
 
-void init_protocol(UART_HandleTypeDef* huart)
+void protocol_init(UART_HandleTypeDef* huart)
 {
-	s_send_package.head = PROTOCOL_START_CODE;
 	// Init receive operation
 	s_recv_state = WAIT_HEAD;
 	HAL_UART_Receive_IT(huart, &s_recv_package.head, 1);
-}
-// TODO: This piece of code has bugs, fix latter
-void protocol_send(UART_HandleTypeDef* huart, protocol_status_t status)
-{
-	s_send_package.cmd = s_recv_package.cmd;
-	s_send_package.id = s_recv_package.id;
-	/* These part belongs to a gloable shared variables
-	 * But read operation does not require to lock the variables
-	 * Consider doing so if the data hands out unstable
-	 */
-	s_send_package.status = status;
-	if (status == BAD_CRC) {
-		s_send_package.body[0] = 0;
-		s_send_package.body[1] = 0;
-		s_send_package.body[2] = 0;
-		s_send_package.body[3] = 0;
-	} else {
-		//uint32_t start_tick = osKernelGetTickCount();
-		//while (osKernelGetTickCount() - start_tick < 250) {
-			if (xSemaphoreTakeFromISR(posture_mutex, NULL) == pdTRUE) {
-				s_send_package.body[0] = x;
-				s_send_package.body[1] = y;
-				s_send_package.body[2] = theta;
-				s_send_package.body[3] = v;
-			}
-		//}
-	}
-	s_send_package.crc = compute_crc((uintptr_t *)&s_recv_package, 
-					sizeof(protocol_package_t)-sizeof(uint16_t));
-	HAL_UART_Transmit_IT(huart, (uint8_t *)&s_send_package, sizeof(protocol_package_t));
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart)
@@ -182,23 +151,23 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart)
 				HAL_UART_Receive_IT(huart, &s_recv_package.head, 1);
 			} else {
 				s_recv_state = CHECK_CRC;
-				HAL_UART_Receive_IT(huart, &s_recv_package.id, 1);
-				HAL_UART_Receive_IT(huart, &s_recv_package.status, 1);
-				HAL_UART_Receive_IT(huart, (uint8_t *)&s_recv_package.body, 4*PROTOCOL_LEN);
-				HAL_UART_Receive_IT(huart, (uint8_t *)&s_recv_package.crc, 2);
+				/* Receive all remaining bytes
+				 * id: 1 byte
+				 * comd: 1 byte
+				 * body: PROTOCOL_LEN * 4 (float 32 bit)
+				 * crc: 2 byte
+				 */
+				HAL_UART_Receive_IT(huart, 
+						&s_recv_package.id, 
+						1 + 1 + (4 * PROTOCOL_LEN) + 2);
 			}
 			break;
 		case CHECK_CRC:
-			uint16_t recv_crc = compute_crc(
-					(uintptr_t *)&s_recv_package, 
-					sizeof(protocol_package_t)-sizeof(uint16_t));
-			if (recv_crc == s_recv_package.crc) {
-				protocol_send(huart, GOOD_RES);
-			} else {
-				protocol_send(huart, BAD_CRC);
-			}
-			s_recv_state = WAIT_HEAD;
-			break;
+			s_protocol_task_wake = pdFALSE;
+			/* Wake the task to process this data */
+			xQueueOverwriteFromISR(g_protocol_queue, &s_recv_package, &s_protocol_task_wake);
+			if (s_protocol_task_wake == pdTRUE) 
+				portYIELD_FROM_ISR((BaseType_t)NULL);
 		default:
 			s_recv_state = WAIT_HEAD;
 			HAL_UART_Receive_IT(huart, &s_recv_package.head, 1);

@@ -30,6 +30,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "queue.h"
 
 #include "pid.h"
 
@@ -53,9 +54,32 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+
+/* 
+ * refernce posture is shared resources.
+ * This resource is used by:
+ * - Stable tracking receive vr and omegar.
+ * - Pose stabilization receive vr and omegar.
+ * - ESP32 update xr, yr, thetar, vr through Protocol.
+ * - Interpolator both use and update the values.
+ */
+xSemaphoreHandle ref_pos_mutex;
+volatile float xr, yr, thetar, vr, omegar;
+
+/* 
+ * Current posture is also shared resources. These value split into 2 case:
+ * - ENCODER update vc and omegac.
+ * - IMU task update xc, yc, and thetac.
+ * - From omegac, we may update the thetac base on the value to compate with IMU
+ * - PID, Stable tracking, Pose stabilization all use this value to compute error.
+ */ 
 xSemaphoreHandle posture_mutex;
-volatile float x, y, theta, v, omega;
+xSemaphoreHandle velocity_mutex;
+volatile float xc, yc, thetac, vc, omegac;
 const float r_chassis = 0.084 / 2;
+
+/* Queue linking uart interrupt and protocol task */
+QueueHandle_t g_protocol_queue;
 
 /* USER CODE END PV */
 

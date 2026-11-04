@@ -20,7 +20,8 @@
 
 
 #define MAX_RETRIES		3
-#define	PROTOCOL_LEN	8
+#define	PROTOCOL_LEN		8
+#define PROTOCOL_TIME_OUT	250
 
 #define PROTOCOL_START_CODE	0xAB
 
@@ -48,6 +49,7 @@ typedef enum {
 	CMD_SEND,
 	GOOD_RES,
 	BAD_CRC,
+	BROKEN_RES,
 } protocol_status_t;
 
 /* We are using fixed len package here to simplify the receive process,
@@ -59,8 +61,8 @@ typedef struct {
 	uint8_t cmd;
 	uint8_t id;
 	uint8_t status;
-	uint32_t body[PROTOCOL_LEN];
+	float 	body[PROTOCOL_LEN];
 	uint16_t crc;
-} protocol_package_t;
+} __attribute__((packed)) protocol_package_t;
 
 #endif /* SWARM_PROTOCOL_H */
