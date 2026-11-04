@@ -8,9 +8,7 @@
  * @License : GNU GENERAL PUBLIC LICENSE
  */
 
-#include "pid.h"
-#include "task.h"
-#include "semphr.h"
+#include "app_tasks.h"
 
 /* store internal digital PID state */
 typedef struct {

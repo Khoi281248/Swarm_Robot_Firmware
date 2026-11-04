@@ -33,7 +33,7 @@
 #include "queue.h"
 
 #include "protocol_slave.h"
-#include "pid.h"
+#include "app_tasks.h"
 
 /* USER CODE END Includes */
 
@@ -138,6 +138,7 @@ int main(void)
 	/* Task creation after shared resources have been initiated */
 	pid_loop_task_start(0);
 	protocol_task_start(&huart1, tskIDLE_PRIORITY);
+	stable_tracking_task_start(1);
 
   /* USER CODE END 2 */
 

@@ -8,12 +8,11 @@
  */
 
 #include <math.h>
-#include "FreeRTOS.h"
-#include "semphr.h"
+#include "app_tasks.h"
 
-const static float kx = 2.0; 
-const static float ky = 100.0; 
-const static float kt = 20.0; 
+const static float kx = 2.0f; 
+const static float ky = 100.0f; 
+const static float kt = 20.0f;
 
 static float xe, ye,thetae;
 extern float xr, yr, thetar, vr, omegar;	// command value from ESP32, and Interpolator
@@ -49,8 +48,14 @@ void stable_tracking_loop(void)
 			xSemaphoreGive(ref_pos_mutex);
 		}
 		/* Compute error */
-		xe = cos(_thetac) * (_xr - _xc) + sin(_thetac) * (_yr - _yc);
-		ye = cos(_thetac) * (_yr - _yc) - sin(_thetac) * (_xr - _xc);
+		float dx, dy, ct, st;
+		dx = _xr - _xc;
+		dy = _yr - _yc;
+		ct = cosf(_thetac);
+		st = sinf(_thetac);
+
+		xe = ct * dx + st * dy;
+		ye = ct * dy - st * dx;
 		thetae = _thetar - _thetac;
 		/* Control rules */
 		_vc 	= kx * xe + _vr * cos(thetae);
