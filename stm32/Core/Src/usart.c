@@ -19,6 +19,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "usart.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
 
 /* USER CODE BEGIN 0 */
 
@@ -121,15 +124,17 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 static protocol_package_t s_recv_package;
 static protocol_package_t s_send_package;
 static protocol_recv_state_t s_recv_state;
-extern float x, y, theta, v;
+extern volatile float x, y, theta, v;
+extern xSemaphoreHandle posture_mutex;
 
 void init_protocol(UART_HandleTypeDef* huart)
 {
+	s_send_package.head = PROTOCOL_START_CODE;
 	// Init receive operation
 	s_recv_state = WAIT_HEAD;
 	HAL_UART_Receive_IT(huart, &s_recv_package.head, 1);
 }
-
+// TODO: This piece of code has bugs, fix latter
 void protocol_send(UART_HandleTypeDef* huart, protocol_status_t status)
 {
 	s_send_package.cmd = s_recv_package.cmd;
@@ -138,16 +143,22 @@ void protocol_send(UART_HandleTypeDef* huart, protocol_status_t status)
 	 * But read operation does not require to lock the variables
 	 * Consider doing so if the data hands out unstable
 	 */
+	s_send_package.status = status;
 	if (status == BAD_CRC) {
 		s_send_package.body[0] = 0;
 		s_send_package.body[1] = 0;
 		s_send_package.body[2] = 0;
 		s_send_package.body[3] = 0;
 	} else {
-		s_send_package.body[0] = x;
-		s_send_package.body[1] = y;
-		s_send_package.body[2] = theta;
-		s_send_package.body[3] = v;
+		//uint32_t start_tick = osKernelGetTickCount();
+		//while (osKernelGetTickCount() - start_tick < 250) {
+			if (xSemaphoreTakeFromISR(posture_mutex, NULL) == pdTRUE) {
+				s_send_package.body[0] = x;
+				s_send_package.body[1] = y;
+				s_send_package.body[2] = theta;
+				s_send_package.body[3] = v;
+			}
+		//}
 	}
 	s_send_package.crc = compute_crc((uintptr_t *)&s_recv_package, 
 					sizeof(protocol_package_t)-sizeof(uint16_t));
