@@ -32,6 +32,7 @@
 #include "semphr.h"
 #include "queue.h"
 
+#include "protocol_slave.h"
 #include "pid.h"
 
 /* USER CODE END Includes */
@@ -78,8 +79,8 @@ xSemaphoreHandle velocity_mutex;
 volatile float xc, yc, thetac, vc, omegac;
 const float r_chassis = 0.084 / 2;
 
-/* Queue linking uart interrupt and protocol task */
-QueueHandle_t g_protocol_queue;
+/* uart port */
+extern UART_HandleTypeDef huart1;
 
 /* USER CODE END PV */
 
@@ -135,6 +136,7 @@ int main(void)
 
 	/* Task creation after shared resources have been initiated */
 	pid_loop_task_start(0);
+	protocol_task_start(&huart1, tskIDLE_PRIORITY);
 
   /* USER CODE END 2 */
 

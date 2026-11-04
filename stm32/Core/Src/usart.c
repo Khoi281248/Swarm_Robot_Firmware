@@ -25,6 +25,7 @@
 #include "queue.h"
 #include "hardware_protocol.h"
 #include "software_crc.h"
+#include "protocol_slave.h"
 
 /* USER CODE END 0 */
 
@@ -127,7 +128,7 @@ static protocol_recv_state_t s_recv_state;
 static BaseType_t s_protocol_task_wake;
 extern QueueHandle_t g_protocol_queue;
 
-void protocol_init(UART_HandleTypeDef* huart)
+void protocol_receive_init(UART_HandleTypeDef* huart)
 {
 	// Init receive operation
 	s_recv_state = WAIT_HEAD;

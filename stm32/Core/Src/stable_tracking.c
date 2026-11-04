@@ -8,10 +8,10 @@
  */
 
 static float xe, ye,thetae;
-extern float xr, yr, thetar;		// command value from ESP32
-extern float x, y, theta, v, omega;	// current value
+extern float xr, yr, thetar, vr, omegar;	// command value from ESP32, and Interpolator
+extern float xc, yc, thetac, vc, omegac;	// current value
 
 void stable_tracking_task_start(unsigned portBASE_TYPE prior)
 {
-
+	
 }

@@ -13,35 +13,40 @@
 #include "queue.h"
 #include "hardware_protocol.h"
 #include "software_crc.h"
+#include "protocol_slave.h"
 
 static protocol_package_t s_send_package;
 extern volatile float xc, yc, thetac, vc;
 extern volatile float xr, yr, thetar, vr;
-extern QueueHandle_t g_protocol_queue;
 extern xSemaphoreHandle posture_mutex;
 extern xSemaphoreHandle velocity_mutex;
 extern xSemaphoreHandle ref_pos_mutex;
 
 /* static helpers */
-static inline void protocol__send_in_time(void);
 static inline TickType_t protocol__update_in_time(void);
+static inline uint8_t protocol__send_in_time(void);
+
+extern void protocol_receive_init(UART_HandleTypeDef* huart);
+static void protocol_task(UART_HandleTypeDef* huart);
+/* Queue linking uart interrupt and protocol task */
+QueueHandle_t g_protocol_queue;
 
 void protocol_task_start(UART_HandleTypeDef* huart, unsigned portBASE_TYPE prior)
 {
 	s_send_package.head = PROTOCOL_START_CODE;
 	g_protocol_queue = xQueueCreate(1, sizeof(protocol_package_t));
-	protocol_init(huart);
+	protocol_receive_init(huart);
 	
-	xTaskCreate((TaskFunction_t)protocol_task, "protocol_data_update", 512, (void *) NULL, 
+	xTaskCreate((TaskFunction_t)protocol_task, "protocol_data_update", 512, (void *) huart, 
 			(UBaseType_t) prior, (TaskHandle_t *) NULL);
 }
 
-void protocol_task(void)
+static void protocol_task(UART_HandleTypeDef* huart)
 {
 	for (;;) {
 		/* blocking wait for uart interrupt push data to send package */
 		xQueueReceive(g_protocol_queue, &s_send_package, portMAX_DELAY);
-		uint16_t recv_crc = compute_crc((uintptr_t *)&s_recv_package, 
+		uint16_t recv_crc = compute_crc((uintptr_t *)&s_send_package, 
 				sizeof(protocol_package_t)-sizeof(uint16_t));
 		/* Other system status added latter... maybe */
 		if (recv_crc != s_send_package.crc)
@@ -51,7 +56,7 @@ void protocol_task(void)
 		if (!protocol__send_in_time()) {
 			s_send_package.status = BROKEN_RES;
 		}
-		s_send_package.crc = compute_crc((uintptr_t *)&s_recv_package, 
+		s_send_package.crc = compute_crc((uintptr_t *)&s_send_package, 
 				sizeof(protocol_package_t)-sizeof(uint16_t));
 		HAL_UART_Transmit_IT(huart, (uint8_t *)&s_send_package, sizeof(protocol_package_t));
 	}
@@ -93,7 +98,6 @@ static inline uint8_t protocol__send_in_time(void)
 		s_send_package.body[0] = xc;
 		s_send_package.body[1] = yc;
 		s_send_package.body[2] = thetac;
-		xSemaphoreTake(posture_mutex, remain)
 		if (xSemaphoreGive(posture_mutex) != pdTRUE) {
 #ifdef DEBUG
 			while (1);
