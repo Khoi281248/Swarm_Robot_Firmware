@@ -133,7 +133,8 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 	posture_mutex = xSemaphoreCreateMutex();
-
+	velocity_mutex = xSemaphoreCreateMutex();
+	ref_pos_mutex = xSemaphoreCreateMutex();
 	/* Task creation after shared resources have been initiated */
 	pid_loop_task_start(0);
 	protocol_task_start(&huart1, tskIDLE_PRIORITY);

@@ -48,6 +48,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/../shared/src/software_crc.c
     ${CMAKE_SOURCE_DIR}/Core/Src/pid.c
     ${CMAKE_SOURCE_DIR}/Core/Src/protocol_slave.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/stable_tracking.c
 )
 
 # Add include paths
