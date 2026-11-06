@@ -21,22 +21,22 @@ const static float ka = 4.0f;
 
 
 static float xe, ye,thetae;
-extern float xr, yr, thetar, vr, omegar;	// command value from ESP32, and Interpolator
-extern float xc, yc, thetac, vc, omegac;	// current value
+extern volatile float xr, yr, thetar, vr, omegar;	// command value from ESP32, and Interpolator
+extern volatile float xc, yc, thetac, vc, omegac;	// current value
 extern xSemaphoreHandle posture_mutex, velocity_mutex, ref_pos_mutex;
 
 static void stable_tracking_loop(void);
 static void pose_stabilization_loop(void);
+void tracking_loop(void);
 
 void tracking_task_start(unsigned portBASE_TYPE prior)
 {
-	xTaskCreate((TaskFunction_t)stable_tracking_loop, "stable_tracking_control_loop", 
+	xTaskCreate((TaskFunction_t)tracking_loop, "stable_tracking_control_loop", 
 			512, (void *) NULL, (UBaseType_t) prior, (TaskHandle_t *) NULL);
 }
 
 void tracking_loop(void)
 {
-	float _xc, _xr, _yc, _yr, _thetac, _thetar, _vc, _vr, _omegac, _omegar;
 	TickType_t tick;
 	for (;;) {
 		tick = xTaskGetTickCount();
@@ -44,8 +44,10 @@ void tracking_loop(void)
 		vTaskDelayUntil(&tick, pdMS_TO_TICKS(10));
 	}
 }
+
 static void stable_tracking_loop(void)
 {
+	float _xc, _xr, _yc, _yr, _thetac, _thetar, _vc, _vr, _omegac, _omegar;
 	/* copy shared resource */
 	if (xSemaphoreTake(posture_mutex, portMAX_DELAY) == pdTRUE) {
 		_xc = xc;
@@ -84,6 +86,7 @@ static void stable_tracking_loop(void)
 
 static void pose_stabilization_loop(void) 
 {
+	float _xc, _xr, _yc, _yr, _thetac, _thetar, _vc, _omegac;
 	/* copy shared resource */
 	if (xSemaphoreTake(posture_mutex, portMAX_DELAY) == pdTRUE) {
 		_xc = xc;
@@ -108,8 +111,8 @@ static void pose_stabilization_loop(void)
 	thetae = _thetac - _thetar;
 
 	/* Convert to Polar coordinate */
-	float re, ae;
-	re = sqrt(square(xe) + square(ye));
+	float re, phie, alphae;
+	re = sqrt(pow(xe, 2) + pow(ye, 2));
 	phie = atan2(ye, xe);
 	alphae = thetae - phie;
 	float ca, sa, sp;
@@ -127,5 +130,4 @@ static void pose_stabilization_loop(void)
 		omegac = _omegac;
 		xSemaphoreGive(velocity_mutex);
 	}
-
 }

@@ -136,9 +136,9 @@ int main(void)
 	velocity_mutex = xSemaphoreCreateMutex();
 	ref_pos_mutex = xSemaphoreCreateMutex();
 	/* Task creation after shared resources have been initiated */
-	pid_loop_task_start(0);
 	protocol_task_start(&huart1, tskIDLE_PRIORITY);
-	stable_tracking_task_start(1);
+	pid_loop_task_start(0);
+	tracking_task_start(1);
 
   /* USER CODE END 2 */
 

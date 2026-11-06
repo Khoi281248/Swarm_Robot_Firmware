@@ -15,6 +15,6 @@
 #include "semphr.h"
 
 void pid_loop_task_start(unsigned portBASE_TYPE prior);
-void stable_tracking_task_start(unsigned portBASE_TYPE prior);
+void tracking_task_start(unsigned portBASE_TYPE prior);
 
 #endif /* APP_TASKS_H */
