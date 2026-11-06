@@ -25,7 +25,6 @@
 #include "queue.h"
 #include "hardware_protocol.h"
 #include "software_crc.h"
-#include "protocol_slave.h"
 
 /* USER CODE END 0 */
 

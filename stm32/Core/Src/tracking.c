@@ -10,6 +10,7 @@
 
 #include <math.h>
 #include "app_tasks.h"
+#include "hardware_protocol.h"
 
 /* Stable tracking gains */
 const static float kx = 2.0f; 
@@ -19,14 +20,24 @@ const static float kt = 20.0f;
 const static float kr = 2.0f; 
 const static float ka = 4.0f;
 
-
 static float xe, ye,thetae;
 extern volatile float xr, yr, thetar, vr, omegar;	// command value from ESP32, and Interpolator
 extern volatile float xc, yc, thetac, vc, omegac;	// current value
+extern volatile uint8_t command;
 extern xSemaphoreHandle posture_mutex, velocity_mutex, ref_pos_mutex;
 
-static void stable_tracking_loop(void);
-static void pose_stabilization_loop(void);
+static inline void stable_tracking_loop(float *_vc, float *_omegac,
+	const float _xc, const float _xr, const float _yc, const float _yr, 
+	const float _thetac, const float _thetar, const float _vr, const float _omegar);
+
+static inline void pose_stabilization_loop(float *_vc, float *_omegac,
+	const float _xc, const float _xr, const float _yc, const float _yr, 
+	const float _thetac, const float _thetar);
+
+static inline void run_command(const uint8_t cmd,
+	const float _xc, const float _xr, const float _yc, const float _yr, 
+	const float _thetac, const float _thetar, const float _vr, const float _omegar);
+
 void tracking_loop(void);
 
 void tracking_task_start(unsigned portBASE_TYPE prior)
@@ -37,31 +48,67 @@ void tracking_task_start(unsigned portBASE_TYPE prior)
 
 void tracking_loop(void)
 {
+	float _xc, _xr, _yc, _yr, _thetac, _thetar, _vr, _omegar;
+	uint8_t _command;
 	TickType_t tick;
 	for (;;) {
 		tick = xTaskGetTickCount();
+		/* copy shared resource */
+		if (xSemaphoreTake(posture_mutex, portMAX_DELAY) == pdTRUE) {
+			_xc = xc;
+			_yc = yc;
+			_thetac = thetac;
+			xSemaphoreGive(posture_mutex);
+		} if (xSemaphoreTake(ref_pos_mutex, portMAX_DELAY) == pdTRUE) {
+			_xr = xr;
+			_yr = yr;
+			_thetar = thetar;
+			_vr = vr;
+			_omegar = omegar;
+			_command = command;
+			xSemaphoreGive(ref_pos_mutex);
+		}
+		run_command(_command, _xc, _xr, _yc, _yr, _thetac, _thetar, _vr, _omegar);
 		/* run the control loop at discrete time, t = 10ms */
 		vTaskDelayUntil(&tick, pdMS_TO_TICKS(10));
 	}
 }
 
-static void stable_tracking_loop(void)
+/* this is separate function for easy to expand if latter command is added */
+static inline void run_command(const uint8_t cmd,
+	const float _xc, const float _xr, 
+	const float _yc, const float _yr, 
+	const float _thetac, const float _thetar, 
+	const float _vr, const float _omegar)
 {
-	float _xc, _xr, _yc, _yr, _thetac, _thetar, _vc, _vr, _omegac, _omegar;
-	/* copy shared resource */
-	if (xSemaphoreTake(posture_mutex, portMAX_DELAY) == pdTRUE) {
-		_xc = xc;
-		_yc = yc;
-		_thetac = thetac;
-		xSemaphoreGive(posture_mutex);
-	} if (xSemaphoreTake(ref_pos_mutex, portMAX_DELAY) == pdTRUE) {
-		_xr = xr;
-		_yr = yr;
-		_thetar = thetar;
-		_vr = vr;
-		_omegar = omegar;
-		xSemaphoreGive(ref_pos_mutex);
+	float _vc, _omegac;
+	switch (cmd) {
+		case GO_TO_POINT_EXACT:
+			/* Interpolation will live in other task, which update the shared resoures */
+		case GO_TO_POINT_FAST:
+			stable_tracking_loop(&_vc, &_omegac, _xc, _xr, 
+					_yc, _yr, _thetac, _thetar, _vr, _omegar);
+			break;
+		case STABILIZE_AT_POINT:
+			pose_stabilization_loop(&_vc, &_omegac, _xc, _xr, 
+					_yc, _yr, _thetac, _thetar);
+			break;
+
 	}
+
+	/* Update the command value */
+	if (xSemaphoreTake(velocity_mutex, portMAX_DELAY) == pdTRUE) {
+		vc 	= _vc;
+		omegac 	= _omegac;
+		xSemaphoreGive(velocity_mutex);
+	}
+}
+
+/* save some time stacking here with inline, but gcc will do the same job anyway */
+static inline void stable_tracking_loop(float *_vc, float *_omegac,
+	const float _xc, const float _xr, const float _yc, const float _yr, 
+	const float _thetac, const float _thetar, const float _vr, const float _omegar)
+{
 	/* Compute error */
 	float dx, dy, ct, st;
 	dx = _xr - _xc;
@@ -73,32 +120,14 @@ static void stable_tracking_loop(void)
 	ye = ct * dy - st * dx;
 	thetae = _thetar - _thetac;
 	/* Control rules */
-	_vc 	= kx * xe + _vr * cos(thetae);
-	_omegac = _omegar + _vr * (ky * ye + kt * sin(thetae));
-
-	/* Update the command value */
-	if (xSemaphoreTake(velocity_mutex, portMAX_DELAY) == pdTRUE) {
-		vc = _vc;
-		omegac = _omegac;
-		xSemaphoreGive(velocity_mutex);
-	}
+	*_vc 	= kx * xe + _vr * cosf(thetae);
+	*_omegac = _omegar + _vr * (ky * ye + kt * sinf(thetae));
 }
 
-static void pose_stabilization_loop(void) 
+static inline void pose_stabilization_loop(float *_vc, float *_omegac,
+	const float _xc, const float _xr, const float _yc, const float _yr, 
+	const float _thetac, const float _thetar)
 {
-	float _xc, _xr, _yc, _yr, _thetac, _thetar, _vc, _omegac;
-	/* copy shared resource */
-	if (xSemaphoreTake(posture_mutex, portMAX_DELAY) == pdTRUE) {
-		_xc = xc;
-		_yc = yc;
-		_thetac = thetac;
-		xSemaphoreGive(posture_mutex);
-	} if (xSemaphoreTake(ref_pos_mutex, portMAX_DELAY) == pdTRUE) {
-		_xr = xr;
-		_yr = yr;
-		_thetar = thetar;
-		xSemaphoreGive(ref_pos_mutex);
-	}
 	/* Compute error */
 	float dx, dy, ct, st;
 	dx = _xc - _xr;
@@ -113,21 +142,14 @@ static void pose_stabilization_loop(void)
 	/* Convert to Polar coordinate */
 	float re, phie, alphae;
 	re = sqrt(pow(xe, 2) + pow(ye, 2));
-	phie = atan2(ye, xe);
+	phie = atan2f(ye, xe);
 	alphae = thetae - phie;
 	float ca, sa, sp;
-	ca = cos(alphae);
-	sa = sin(alphae);
-	sp = sin(phie);
+	ca = cosf(alphae);
+	sa = sinf(alphae);
+	sp = sinf(phie);
 
 	/* Control rules */
-	_vc 	= - kr * re * ca;
-	_omegac = (sp - sa) * kr * ca - ka * sa;
-
-	/* Update the command value */
-	if (xSemaphoreTake(velocity_mutex, portMAX_DELAY) == pdTRUE) {
-		vc = _vc;
-		omegac = _omegac;
-		xSemaphoreGive(velocity_mutex);
-	}
+	*_vc 	= - kr * re * ca;
+	*_omegac = (sp - sa) * kr * ca - ka * sa;
 }

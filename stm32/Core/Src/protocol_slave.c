@@ -13,11 +13,12 @@
 #include "queue.h"
 #include "hardware_protocol.h"
 #include "software_crc.h"
-#include "protocol_slave.h"
+#include "app_tasks.h"
 
 static protocol_package_t s_send_package;
 extern volatile float xc, yc, thetac, vc;
 extern volatile float xr, yr, thetar, vr;
+extern volatile uint8_t command;
 extern xSemaphoreHandle posture_mutex;
 extern xSemaphoreHandle velocity_mutex;
 extern xSemaphoreHandle ref_pos_mutex;
@@ -67,6 +68,7 @@ static inline TickType_t protocol__update_in_time(void)
 	TickType_t start = xTaskGetTickCount();
 	/* try update reference posture and velocity */
 	if (xSemaphoreTake(ref_pos_mutex, pdMS_TO_TICKS(PROTOCOL_TIME_OUT)) == pdTRUE) {
+		command = s_send_package.cmd;
 		xr 	= s_send_package.body[0];
 		yr 	= s_send_package.body[1];
 		thetar 	= s_send_package.body[2];

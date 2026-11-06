@@ -17,4 +17,7 @@
 void pid_loop_task_start(unsigned portBASE_TYPE prior);
 void tracking_task_start(unsigned portBASE_TYPE prior);
 
+#include "usart.h"
+void protocol_task_start(UART_HandleTypeDef* huart, unsigned portBASE_TYPE prior);
+
 #endif /* APP_TASKS_H */

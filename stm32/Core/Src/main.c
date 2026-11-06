@@ -32,7 +32,6 @@
 #include "semphr.h"
 #include "queue.h"
 
-#include "protocol_slave.h"
 #include "app_tasks.h"
 
 /* USER CODE END Includes */
@@ -66,6 +65,7 @@
  */
 xSemaphoreHandle ref_pos_mutex;
 volatile float xr, yr, thetar, vr, omegar;
+volatile uint8_t command;
 
 /* 
  * Current posture is also shared resources. These value split into 2 case:
