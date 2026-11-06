@@ -47,6 +47,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_SOURCE_DIR}/../shared/src/software_crc.c
     ${CMAKE_SOURCE_DIR}/Core/Src/pid.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/protocol_slave.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/tracking.c
 )
 
 # Add include paths
@@ -69,6 +71,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
+    m
 )
 
 set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)

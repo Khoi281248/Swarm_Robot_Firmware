@@ -30,8 +30,9 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "queue.h"
 
-#include "pid.h"
+#include "app_tasks.h"
 
 /* USER CODE END Includes */
 
@@ -53,9 +54,33 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+
+/* 
+ * refernce posture is shared resources.
+ * This resource is used by:
+ * - Stable tracking receive vr and omegar.
+ * - Pose stabilization receive vr and omegar.
+ * - ESP32 update xr, yr, thetar, vr through Protocol.
+ * - Interpolator both use and update the values.
+ */
+xSemaphoreHandle ref_pos_mutex;
+volatile float xr, yr, thetar, vr, omegar;
+volatile uint8_t command;
+
+/* 
+ * Current posture is also shared resources. These value split into 2 case:
+ * - ENCODER update vc and omegac.
+ * - IMU task update xc, yc, and thetac.
+ * - From omegac, we may update the thetac base on the value to compate with IMU
+ * - PID, Stable tracking, Pose stabilization all use this value to compute error.
+ */ 
 xSemaphoreHandle posture_mutex;
-volatile float x, y, theta, v, omega;
+xSemaphoreHandle velocity_mutex;
+volatile float xc, yc, thetac, vc, omegac;
 const float r_chassis = 0.084 / 2;
+
+/* uart port */
+extern UART_HandleTypeDef huart1;
 
 /* USER CODE END PV */
 
@@ -108,9 +133,12 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 	posture_mutex = xSemaphoreCreateMutex();
-
+	velocity_mutex = xSemaphoreCreateMutex();
+	ref_pos_mutex = xSemaphoreCreateMutex();
 	/* Task creation after shared resources have been initiated */
+	protocol_task_start(&huart1, tskIDLE_PRIORITY);
 	pid_loop_task_start(0);
+	tracking_task_start(1);
 
   /* USER CODE END 2 */
 

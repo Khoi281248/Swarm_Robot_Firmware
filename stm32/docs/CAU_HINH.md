@@ -33,15 +33,14 @@ Tài liệu này ghi lại **mọi thiết lập** của project `STM32_Swarm_Ro
 
 ## 1. Trạng thái hiện tại
 
-*Cập nhật: 27/10/2026*
+*Cập nhật: 6/11/2026*
 
-| Hạng mục | Trạng thái |
-|---|---|
-| Cấu hình CubeMX (clock, chân, ngoại vi, FreeRTOS) | ✅ Xong |
-| Build bằng VS Code và STM32CubeIDE 2.2 | ✅ Được, cùng compiler GNU Tools for STM32 14.3.1 |
-| Code ứng dụng | ⏳ Chưa có. `main.c` và `freertos.c` vẫn là code CubeMX sinh, chưa viết gì trong vùng USER CODE |
-| Test trên mạch thật | ⏳ Chưa. Chưa cắm ST-Link |
-| Stack của `defaultTask` | ⚠️ Đang là 128 words, **cần tăng lên 512** trước khi viết code có `snprintf` (xem [mục 12](#12-freertos)) |
+- Cấu hình phần cứng: Được cấu hình bằng CubeMX (clock, chân, ngoại vi, và FreeRTOS)
+- Build: sử dụng VS Code và STM32CubeIDE 2.2 với cùng compiler GNU Tools for STM32 14.3.1 / 
+Commit hiện tại được build với gcc 16.2 cho arm với newlib không phải bản nano
+- Code ứng dụng: Gần xong phần điều khiển
+- Test trên mạch thật: ⏳ Chưa. Chưa cắm ST-Link
+- Stack của `defaultTask`: ⚠️ Đang là 128 words, **cần tăng lên 512** trước khi viết code có `snprintf` (xem [mục 12](#12-freertos))
 
 Phiên bản công cụ: **STM32CubeMX 6.18.1**, gói **STM32Cube FW_F1 V1.8.7**, toolchain **CMake**.
 
@@ -396,12 +395,22 @@ VBAT_mV = raw × 3300 × 2 / 4095
 
 ## 13. Bộ nhớ RAM và Flash
 
-Số liệu đo từ bản build Debug ngày 27/10/2026 (có FreeRTOS, chưa có code ứng dụng):
+⚠️ Binary Size của commit hiện tại `e646422` 
+đang có flash hơn mức 70% của board:
+```
+Memory region         Used Size  Region Size  %age Used
+             RAM:       18248 B        20 KB     89.10%
+           FLASH:       48740 B        64 KB     74.37%
+```
 
-| Vùng | Đã dùng | Tổng | % |
-|---|---|---|---|
-| FLASH | 27,6 KB | 64 KB | 42 % |
-| **RAM** | **16,7 KB** | 20 KB | **82 %** |
+Nhìn vào section được generate của `.elf`, có một số điều sau:
+- `.text`   có size: 0x0b2d8    (45784 bytes)
+- `.data`   có size: 0x0588     (1416  bytes)
+- `.bss`    có size: 0x03bc0    (15296 bytes)
+- `.rodata` có size: 0x04e4     (1252  bytes)
+
+trong đó, `.text` và `.rodata` nằm trên flash, và text hiện có dung
+lượng khá lớn.
 
 **RAM dùng vào đâu:**
 

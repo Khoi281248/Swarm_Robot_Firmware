@@ -8,9 +8,7 @@
  * @License : GNU GENERAL PUBLIC LICENSE
  */
 
-#include "pid.h"
-#include "task.h"
-#include "semphr.h"
+#include "app_tasks.h"
 
 /* store internal digital PID state */
 typedef struct {
@@ -37,7 +35,7 @@ const static float det = 0.01;
 const static float alpha = 1;
 
 /* Shared resources */
-extern float v, omega, r_chassis;
+extern float vr, omegar, r_chassis;
 extern xSemaphoreHandle posture_mutex;
 
 static pid_state_t left_w = {
@@ -99,8 +97,8 @@ void pid_update_setpoint(void)
 	float linear, angular;
 	if (xSemaphoreTake(posture_mutex, portMAX_DELAY) == pdTRUE) {	// This cause pooling wait
 		// retreive data from shared resource
-		linear = v;
-		angular = omega;
+		linear = vr;
+		angular = omegar;
 	}
 	left_w.setpoint  = linear - r_chassis * angular;
 	right_w.setpoint = linear + r_chassis * angular;
